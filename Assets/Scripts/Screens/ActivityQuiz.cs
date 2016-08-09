@@ -34,7 +34,8 @@ public class ActivityQuiz : Screen {
 
 	//------------ QUEST RESPONSES --------------------
 	private Texture2D Photo;
-	private bool IsQuizCorrect, QuestSent;
+	private bool QuestSent, isQuiz;
+	private string QuizStatus;
 
 	public void Start () 
 	{
@@ -84,11 +85,13 @@ public class ActivityQuiz : Screen {
 		{
 			ID = ActivityID.text;
 			APIPlace = "/activity/get/";
+			isQuiz = false;
 		}
 		else
 		{
 			ID = QuizID.text;
 			APIPlace = "/quiz/get/";
+			isQuiz = true;
 		}
 
 		if (ID.Length < 1)
@@ -167,14 +170,22 @@ public class ActivityQuiz : Screen {
      	else 
      	{
      		// Se a tela a missão tem GPS e tela de GPS e de Media estão Offline, ative a tela de GPS.
-	     	if (Activity.is_gps_enabled && !(GPSScreen.activeSelf) && !(MediaScreen.activeSelf))
+	     	if (Activity.gps_enabled && !(GPSScreen.activeSelf) && !(MediaScreen.activeSelf))
 	     		OpenScreen("GPS Screen");
-	     	// Se tem media e a tela de Media não está ativa, ative a tela de Media.
-	     	else if (Activity.is_media_enabled && !(MediaScreen.activeSelf))
+	     	// Se tem foto e a tela de foto não está ativa, ative a tela de foto.
+	     	else if (Activity.photo_enabled && !(MediaScreen.activeSelf))
 	     		OpenScreen("Media Screen");
 	     	else
 	     		OpenScreen("End");
 	    }
+     }
+
+     public void CheckCoordsAndContinue()
+     {
+     	if (Activity.coord_start == null || Activity.coord_mid == null || Activity.coord_end == null)
+     		ShowToastMessage("Você não marcou as três localizações ainda");
+     	else
+     		ContinueActivity();
      }
 
     private void ShowCameraImage()
@@ -216,20 +227,19 @@ public class ActivityQuiz : Screen {
         ContinueActivity();
     }
 
-    public void AnswerQuiz(Text Answer)
+    public void AnswerQuiz(string Answer)
     {
-    	IsQuizCorrect = false;
+    	QuizStatus = "Errou";
 
-    	if (Quiz.correct.Equals(Answer.text))
-    		IsQuizCorrect = true;
+    	if (Quiz.correct.Equals(Answer))
+    		QuizStatus = "Acertou";
 
     	OpenScreen("End");
     }
 
     public void RegisterPlayerCoordinates(string Step)
     {
-    	// FALAR COM CHICO
-    	string PlayerLocation = "" + Controller.GetLocation();
+    	string PlayerLocation = Controller.GetLocation()[0] + " | " + Controller.GetLocation()[1];
 
     	if (PlayerLocation == null)
     		return;
@@ -242,16 +252,76 @@ public class ActivityQuiz : Screen {
     		Activity.coord_end = PlayerLocation;
     }
 
-    public void SendActivity()
+    public void PrepareSendQuestForm()
     {
     	if (QuestSent)
     		return;
 
     	QuestSent = true;
 
-    	// FORM DE ENVIO
-    	ShowToastMessage("Missão enviada");
-    	OpenScreen("Home");
+    	WWWForm form = new WWWForm ();
+
+    	form.AddField("group_id", Controller.GetTeam().id);
+    	
+    	if (isQuiz)
+    	{
+			form.AddField ("quiz_id", Quiz.id);
+			Debug.Log("Quiz ID: " + Quiz.id);
+			form.AddField("quiz_correct", QuizStatus);
+			Debug.Log("Quiz Status: " + QuizStatus);
+    	}
+		else
+		{
+			form.AddField ("activity_id", Activity.id);
+			Debug.Log("Atividade: " + Activity.id);
+			
+			form.AddField ("location", Activity.location);
+			Debug.Log("Local: " + Activity.location);
+
+			form.AddField ("coord_start", Activity.coord_start);
+			form.AddField ("coord_mid", Activity.coord_mid);
+			form.AddField ("coord_end", Activity.coord_end);
+		}
+
+		if (Photo != null)
+		{
+			form.AddBinaryData("photo", Photo.EncodeToPNG(), "Photo.png", "image/png");
+			Debug.Log("Foto registrada");
+		}
+		else
+		{
+			Debug.Log("Foto não registrada");
+		}
+
+		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey(), form);
+
+		Debug.Log("Sending activity...");
+		ShowToastMessage("Enviando pergaminho...");
+
+		StartCoroutine(SendQuestForm(www));
+    }
+
+    private IEnumerator SendQuestForm(WWW www)
+    {
+    	yield return www;
+        
+        string JSON = www.text;
+        string Error = www.error;
+
+        if (Error == null)
+        {
+	        Debug.Log("Response: " + JSON);
+
+	        ShowToastMessage("Missão enviada");
+    		OpenScreen("Home");
+        }
+        else
+        {
+        	Debug.Log("Error: " + Error);
+        	
+        	ShowToastMessage("Falha ao enviar pergaminho");
+        	QuestSent = false;
+        }
     }
 
     public bool HaveCamera() { return (WebCamTexture.devices.Length > 0) ? true : false; }

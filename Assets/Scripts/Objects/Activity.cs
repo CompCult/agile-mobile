@@ -3,8 +3,7 @@ using System.Collections;
 
 public class Activity {
 
-	public int id,
-			   score;
+	public int id;
 
 	public string name,
 				  description,
@@ -12,11 +11,9 @@ public class Activity {
 				  location,
 				  coord_start,
 				  coord_mid,
-				  coord_end,
-				  medias,
-				  created_at,
-				  updated_at;
+				  coord_end;
 
-	public bool is_gps_enabled,
-			    is_media_enabled;
+	public bool gps_enabled,
+			    photo_enabled,
+			    audio_enabled;
 }
