@@ -32,6 +32,8 @@ public class Controller : MonoBehaviour {
     	Location = null;
         Screen ScreenSystem = GameObject.Find("ScreenSystem").GetComponent<Screen>();
 
+        Debug.Log("Coletando localização...");
+
         // First, check if user has location service enabled
         if (!Input.location.isEnabledByUser)
         {

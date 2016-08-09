@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -12,30 +13,37 @@ public class ActivityQuiz : Screen {
 			 		  QuizHome,
 			 		  GPSScreen, 
 			 		  MediaScreen,
+			 		  VoiceScreen,
 			 		  EndScreen,
 			 		  CameraField;
 
 	public InputField ActivityID,
 					  QuizID;
 
-	//---------- QUEST START SCREEN --------------------
+	[Header("Quest screen elements")]
 	public Text QuestHomeName, QuestHomeDescription, QuestHomePlace;
-	//----------- GPS SCREEN  --------------------------
+	[Header("GPS screen elements")]
 	public Text GPSScreenName;
-	//----------- MEDIA SCREEN -------------------------
+	[Header("Photo screen elements")]
 	public Text MediaScreenName;
-	//----------- QUIZ SCREEN --------------------------
+	[Header("Quiz screen elements")]
 	public Text QuizName, QuizDescription, Alt1, Alt2, Alt3, Alt4;
-	//--------------------------------------------------
+	[Header("Audio screen elements")]
+    private bool micConnected = false;
+    private int minFreq;
+    private int maxFreq;
+    public AudioSource SampleAudioSource, RecordedAudio;
 
+	[Header("Quest objects")]
 	private Activity Activity;
 	private Quiz Quiz;
 	private WebCamTexture MobileCamera;
 
-	//------------ QUEST RESPONSES --------------------
+	[Header("Responses")]
 	private Texture2D Photo;
+	private byte[] AudioSample;
 	private bool QuestSent, isQuiz;
-	private string QuizStatus;
+	private string QuizStatus, CoordStart, CoordMid, CoordEnd;
 
 	public void Start () 
 	{
@@ -66,7 +74,10 @@ public class ActivityQuiz : Screen {
 
 	public void OpenScreen(string Screen)
 	{
-		GameObject[] Screens = new GameObject[] {Home, SearchActScreen, SearchQuizScreen, QuestHome, QuizHome, GPSScreen, MediaScreen, EndScreen};
+		GameObject[] Screens = new GameObject[] {Home, SearchActScreen, 
+												SearchQuizScreen, QuestHome, 
+												QuizHome, GPSScreen, MediaScreen, 
+												VoiceScreen, EndScreen};
 
 		foreach (GameObject ScreenChild in Screens)
 		{
@@ -138,8 +149,23 @@ public class ActivityQuiz : Screen {
         }
      } 
 
+     private void ClearPreviousQuests()
+     {
+     	Photo = null;
+		AudioSample = null;
+		QuestSent = false;
+		QuizStatus = null;
+		CoordStart = null;
+		CoordMid = null;
+		CoordEnd = null;
+
+		Debug.Log("Atividades anteriores foram limpas");
+     }
+
      private void StartActivity()
      {
+     	ClearPreviousQuests();
+
      	QuestHomeName.text = Activity.name;
      	QuestHomeDescription.text = Activity.description;
      	QuestHomePlace.text = Activity.location;
@@ -152,6 +178,8 @@ public class ActivityQuiz : Screen {
 
      private void StartQuiz()
      {
+     	ClearPreviousQuests();
+
      	QuizName.text = Quiz.name;
      	QuizDescription.text = Quiz.question;
 
@@ -163,29 +191,15 @@ public class ActivityQuiz : Screen {
      	OpenScreen("Quiz Home");
      }
 
-     public void ContinueActivity()
-     {
-     	if (QuizHome.activeSelf) // Se a tela de quiz está aberta, então acabou a missão.
-     		OpenScreen("End");
-     	else 
-     	{
-     		// Se a tela a missão tem GPS e tela de GPS e de Media estão Offline, ative a tela de GPS.
-	     	if (Activity.gps_enabled && !(GPSScreen.activeSelf) && !(MediaScreen.activeSelf))
-	     		OpenScreen("GPS Screen");
-	     	// Se tem foto e a tela de foto não está ativa, ative a tela de foto.
-	     	else if (Activity.photo_enabled && !(MediaScreen.activeSelf))
-	     		OpenScreen("Media Screen");
-	     	else
-	     		OpenScreen("End");
-	    }
-     }
-
      public void CheckCoordsAndContinue()
      {
-     	if (Activity.coord_start == null || Activity.coord_mid == null || Activity.coord_end == null)
-     		ShowToastMessage("Você não marcou as três localizações ainda");
+     	if (CoordStart == null || CoordMid == null || CoordEnd == null)
+     	{
+     		ShowToastMessage("Você não marcou as três localizações");
+     		Debug.Log("As três localizações não foram marcadas");
+     	}
      	else
-     		ContinueActivity();
+     		OpenScreen("Media Screen");
      }
 
     private void ShowCameraImage()
@@ -207,7 +221,7 @@ public class ActivityQuiz : Screen {
         if (HaveCamera())
             StartCoroutine(RecordPhoto());
         else
-        	ContinueActivity();
+        	OpenScreen("Voice Screen");
     }
 
     private IEnumerator RecordPhoto()
@@ -224,7 +238,7 @@ public class ActivityQuiz : Screen {
         ShowToastMessage("Foto capturada");
 
         ShowCameraImage();
-        ContinueActivity();
+        OpenScreen("Voice Screen");
     }
 
     public void AnswerQuiz(string Answer)
@@ -239,18 +253,91 @@ public class ActivityQuiz : Screen {
 
     public void RegisterPlayerCoordinates(string Step)
     {
+    	if (Controller.GetLocation() == null || Controller.GetLocation()[0] == null)
+		{
+			ShowToastMessage("Ative o serviço de localização");
+			Debug.Log("Falha ao obter sua localização");
+			return;
+		}
+
     	string PlayerLocation = Controller.GetLocation()[0] + " | " + Controller.GetLocation()[1];
 
     	if (PlayerLocation == null)
     		return;
 
     	if (Step.Equals("coord_start"))
-    		Activity.coord_start = PlayerLocation;
+    		CoordStart = PlayerLocation;
     	else if (Step.Equals("coord_mid"))
-    		Activity.coord_mid = PlayerLocation;
+    		CoordMid = PlayerLocation;
     	else
-    		Activity.coord_end = PlayerLocation;
+    		CoordEnd = PlayerLocation;
     }
+
+    public void RecordMicrophone() 
+    {
+    	if(Microphone.devices.Length <= 0)
+        {
+            Debug.Log("Microphone not connected!");
+            ShowToastMessage("Nenhum microfone encontrado");
+        }
+        else 
+        {
+            micConnected = true;
+            Microphone.GetDeviceCaps(null, out minFreq, out maxFreq);
+                        
+            if(minFreq == 0 && maxFreq == 0)
+                maxFreq = 44100;
+        }
+
+        if(micConnected)
+        {
+            if(!Microphone.IsRecording(null))
+            {
+            	Debug.Log("Clique novamente para parar a gravação");
+            	ShowToastMessage("Clique novamente para parar a gravação");
+                SampleAudioSource.clip = Microphone.Start(null, true, 20, maxFreq);
+            }
+            else //Recording is in progress
+            {
+                Microphone.End(null); //Stop the audio recording
+                AudioClip source = SampleAudioSource.clip;
+                float[] samples = new float[SampleAudioSource.clip.samples * SampleAudioSource.clip.channels];
+                source.GetData(samples, 0);
+
+                // Copy the float data into a byte array
+                AudioSample = new byte[samples.Length * 4];
+				Buffer.BlockCopy(samples, 0, AudioSample, 0, AudioSample.Length);
+
+				ShowToastMessage("Voz gravada com sucesso");
+            }            
+        }
+    }
+
+    public void PlayRecordedSound()
+    {
+    	if (AudioSample == null)
+    		ShowToastMessage("Nenhum som gravado");
+
+		float[] f = ConvertByteToFloat(AudioSample);
+		AudioClip audioClip = AudioClip.Create("testSound", f.Length, 1, 44100, false, false);
+		audioClip.SetData(f, 0);
+
+		RecordedAudio.clip = audioClip;
+		if (Application.platform != RuntimePlatform.Android)
+			RecordedAudio.pitch = 2.2f;
+		else
+			RecordedAudio.pitch = 1;
+
+		RecordedAudio.Play();
+    }
+
+    public float[] ConvertByteToFloat(byte[] array)
+	{
+		float[] data = new float[array.Length / 4];
+		Buffer.BlockCopy(array, 0, data, 0, array.Length);
+
+		return data;
+	}
 
     public void PrepareSendQuestForm()
     {
@@ -278,9 +365,9 @@ public class ActivityQuiz : Screen {
 			form.AddField ("location", Activity.location);
 			Debug.Log("Local: " + Activity.location);
 
-			form.AddField ("coord_start", Activity.coord_start);
-			form.AddField ("coord_mid", Activity.coord_mid);
-			form.AddField ("coord_end", Activity.coord_end);
+			form.AddField ("coord_start", CoordStart);
+			form.AddField ("coord_mid", CoordMid);
+			form.AddField ("coord_end", CoordEnd);
 		}
 
 		if (Photo != null)
@@ -291,6 +378,15 @@ public class ActivityQuiz : Screen {
 		else
 		{
 			Debug.Log("Foto não registrada");
+		}
+
+		if (AudioSample != null)
+		{
+			form.AddBinaryData("audio", AudioSample, "audio.wav", "sound/wav");
+		}
+		else
+		{
+			Debug.Log("Voz não registrada");
 		}
 
 		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey(), form);
@@ -312,7 +408,7 @@ public class ActivityQuiz : Screen {
         {
 	        Debug.Log("Response: " + JSON);
 
-	        ShowToastMessage("Missão enviada");
+	        ShowToastMessage("Pergaminho enviado!");
     		OpenScreen("Home");
         }
         else
