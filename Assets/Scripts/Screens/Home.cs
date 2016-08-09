@@ -5,6 +5,7 @@ using System.Collections;
 public class Home : Screen {
 
 	public Text TeamNameField, GoldCoinsField, SilverCoinsField;
+	public Image TeamEmblem;
 
 	public void Start() 
 	{
@@ -26,6 +27,11 @@ public class Home : Screen {
 		GoldCoinsField.text = GoldCoins.ToString();
 		SilverCoinsField.text = SilverCoins.ToString();
 		TeamNameField.text = TeamName;
+
+		SpriteRenderer sr = gameObject.GetComponent<SpriteRenderer>();
+        sr.sprite = Resources.Load<Sprite>("Emblem/" + TeamName);
+
+        TeamEmblem.sprite = sr.sprite;
 	}
 
 	public void UpdateTeamInfo() 

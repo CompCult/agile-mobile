@@ -30,10 +30,14 @@ public class Controller : MonoBehaviour {
 	private IEnumerator ReceiveCurrentLocationFromGPS()
     {
     	Location = null;
+        Screen ScreenSystem = GameObject.Find("ScreenSystem").GetComponent<Screen>();
 
         // First, check if user has location service enabled
         if (!Input.location.isEnabledByUser)
-            yield break;
+        {
+            ScreenSystem.ShowToastMessage("Ative o serviço de localização");
+            return false;
+        }
 
         // Start service before querying location
         Input.location.Start();
@@ -48,15 +52,12 @@ public class Controller : MonoBehaviour {
 
         // Service didn't initialize in 20 seconds
         if (maxWait < 1)
-        {
-            Debug.Log("Timed out while trying to get device location");
             yield break;
-        }
 
         // Connection has failed
         if (Input.location.status == LocationServiceStatus.Failed)
         {
-            Debug.Log("Unable to determine device location");
+            ScreenSystem.ShowToastMessage("Falha ao receber sua localização");
             yield break;
         }
         else
@@ -66,6 +67,7 @@ public class Controller : MonoBehaviour {
             Location[0] = System.Convert.ToDouble(Input.location.lastData.latitude);
             Location[1] = System.Convert.ToDouble(Input.location.lastData.longitude);
 
+            ScreenSystem.ShowToastMessage("Localização coletada");
             Debug.Log("Localization registered!");
         }
 

@@ -5,10 +5,6 @@ using System.Collections.Generic;
 
 public class Ranking : Screen {
 
-	public GameObject MyTeamCard;
-	public Image MyTeamEmblem, MyTeamMedal, MyTeamBG;
-	public Text MyTeamName, MyGoldCoins, MySilverCoins;
-
 	public GameObject TeamCard;
 	public Image TeamEmblem, TeamMedal, TeamBG;
 	public Text TeamName, GoldCoins, SilverCoins;
@@ -66,8 +62,33 @@ public class Ranking : Screen {
 
         teamList.Sort((x, y) => x.total_points.CompareTo(y.total_points));
 
-        foreach (Team team in teamList)
-        	Debug.Log(team.ToString());
+        CreateTeamsCard();
+     }
+
+     private void CreateTeamsCard()
+     {
+     	Vector3 Position = TeamCard.transform.position;
+
+     	foreach (Team team in teamList)
+        {
+        	TeamName.text = team.name;
+        	GoldCoins.text = "" + team.gold_coins;
+        	SilverCoins.text = "" + team.silver_coins;
+
+            Position = new Vector3(Position.x, Position.y - 100, Position.z);
+            
+            SpriteRenderer sr = gameObject.GetComponent<SpriteRenderer>();
+            sr.sprite = Resources.Load<Sprite>("Emblem/" + team.name);
+
+            TeamEmblem.sprite = sr.sprite;
+
+            GameObject Card = (GameObject) Instantiate(TeamCard, Position, Quaternion.identity);
+            Card.transform.SetParent(GameObject.Find("Teams").transform, false);
+
+            Debug.Log(team.ToString());
+        }
+
+        Destroy(TeamCard);
      }
 
 }

@@ -23,7 +23,7 @@ public class ActivityQuiz : Screen {
 	//----------- GPS SCREEN  --------------------------
 	public Text GPSScreenName;
 	//----------- MEDIA SCREEN -------------------------
-	public Text MediaScrenName;
+	public Text MediaScreenName;
 	//----------- QUIZ SCREEN --------------------------
 	public Text QuizName, QuizDescription, Alt1, Alt2, Alt3, Alt4;
 	//--------------------------------------------------
@@ -31,6 +31,10 @@ public class ActivityQuiz : Screen {
 	private Activity Activity;
 	private Quiz Quiz;
 	private WebCamTexture MobileCamera;
+
+	//------------ QUEST RESPONSES --------------------
+	private Texture2D Photo;
+	private bool IsQuizCorrect, QuestSent;
 
 	public void Start () 
 	{
@@ -40,6 +44,7 @@ public class ActivityQuiz : Screen {
 		OpenScreen("Home");
 
 		ShowCameraImage();
+		Controller.GetLocation();
 	}
 	
 	public override void Update()
@@ -47,7 +52,12 @@ public class ActivityQuiz : Screen {
 		if (Input.GetKeyUp(KeyCode.Escape)) 
 		{
 			if (Home.activeSelf)
+			{
+				CameraField.GetComponent<Renderer>().material.mainTexture = null;
+            	MobileCamera.Stop();
+
 				LoadScene();
+			}
 			else
 				OpenScreen("Home");
 		}
@@ -66,7 +76,7 @@ public class ActivityQuiz : Screen {
 		}
 	}
 
-	public void CreateActivityOrQuizForm(string Type) 
+	public void PrepareQuestForm(string Type) 
 	{
 		string ID = null;
 
@@ -82,16 +92,17 @@ public class ActivityQuiz : Screen {
 		}
 
 		if (ID.Length < 1)
-			ID += "1";
+			ID = "-1";
 
+		ShowToastMessage("Buscando missão...");
 		Debug.Log("Requesting Quiz/Activity with ID " + ID + "...");
 
 		WWW www = new WWW (Controller.GetURL() + APIPlace + ID + "/" + Controller.GetKey());
 
-		StartCoroutine(SendActivityOrQuizForm(www, Type));
+		StartCoroutine(ReadQuestForm(www, Type));
 	}
 
-	private IEnumerator SendActivityOrQuizForm(WWW www, string Type)
+	private IEnumerator ReadQuestForm(WWW www, string Type)
     {
         yield return www;
         
@@ -116,6 +127,11 @@ public class ActivityQuiz : Screen {
         else
         {
         	Debug.Log("Error: " + Error);
+
+        	if (Error.Contains("404"))
+        		ShowToastMessage("Missão não encontrada");
+        	else
+        		ShowToastMessage("Falha no servidor");
         }
      } 
 
@@ -126,7 +142,7 @@ public class ActivityQuiz : Screen {
      	QuestHomePlace.text = Activity.location;
 
      	GPSScreenName.text = Activity.name;
-     	MediaScrenName.text = Activity.name;
+     	MediaScreenName.text = Activity.name;
 
      	OpenScreen("Quest Home");
      }
@@ -135,6 +151,7 @@ public class ActivityQuiz : Screen {
      {
      	QuizName.text = Quiz.name;
      	QuizDescription.text = Quiz.question;
+
      	Alt1.text = Quiz.option_1;
      	Alt2.text = Quiz.option_2;
      	Alt3.text = Quiz.option_3;
@@ -145,12 +162,14 @@ public class ActivityQuiz : Screen {
 
      public void ContinueActivity()
      {
-     	if (QuizHome.activeSelf)
+     	if (QuizHome.activeSelf) // Se a tela de quiz está aberta, então acabou a missão.
      		OpenScreen("End");
      	else 
      	{
+     		// Se a tela a missão tem GPS e tela de GPS e de Media estão Offline, ative a tela de GPS.
 	     	if (Activity.is_gps_enabled && !(GPSScreen.activeSelf) && !(MediaScreen.activeSelf))
 	     		OpenScreen("GPS Screen");
+	     	// Se tem media e a tela de Media não está ativa, ative a tela de Media.
 	     	else if (Activity.is_media_enabled && !(MediaScreen.activeSelf))
 	     		OpenScreen("Media Screen");
 	     	else
@@ -160,13 +179,17 @@ public class ActivityQuiz : Screen {
 
     private void ShowCameraImage()
 	{
+		CameraField.GetComponent<Renderer>().material.mainTexture = null;
+			
+		if (MobileCamera != null)
+			MobileCamera.Stop();
+		
 		MobileCamera = new WebCamTexture();
         CameraField.GetComponent<Renderer>().material.mainTexture = MobileCamera;
 
         if (HaveCamera())
             MobileCamera.Play();
 	}
-
 
     public void TrySendPhoto()
     {
@@ -181,15 +204,54 @@ public class ActivityQuiz : Screen {
         yield return new WaitForEndOfFrame(); 
 
 		// Creates a texture to hold the photo
-        Texture2D photo = new Texture2D(MobileCamera.width, MobileCamera.height);
-        photo.SetPixels(MobileCamera.GetPixels());
-        photo.Apply();
+        Photo = new Texture2D(MobileCamera.width, MobileCamera.height);
+        Photo.SetPixels(MobileCamera.GetPixels());
+        Photo.Apply();
 
-        CameraField.GetComponent<Renderer>().material.mainTexture = photo;
+        CameraField.GetComponent<Renderer>().material.mainTexture = Photo;
 
-        yield return new WaitForSeconds(4);
+        ShowToastMessage("Foto capturada");
+
         ShowCameraImage();
         ContinueActivity();
+    }
+
+    public void AnswerQuiz(Text Answer)
+    {
+    	IsQuizCorrect = false;
+
+    	if (Quiz.correct.Equals(Answer.text))
+    		IsQuizCorrect = true;
+
+    	OpenScreen("End");
+    }
+
+    public void RegisterPlayerCoordinates(string Step)
+    {
+    	// FALAR COM CHICO
+    	string PlayerLocation = "" + Controller.GetLocation();
+
+    	if (PlayerLocation == null)
+    		return;
+
+    	if (Step.Equals("coord_start"))
+    		Activity.coord_start = PlayerLocation;
+    	else if (Step.Equals("coord_mid"))
+    		Activity.coord_mid = PlayerLocation;
+    	else
+    		Activity.coord_end = PlayerLocation;
+    }
+
+    public void SendActivity()
+    {
+    	if (QuestSent)
+    		return;
+
+    	QuestSent = true;
+
+    	// FORM DE ENVIO
+    	ShowToastMessage("Missão enviada");
+    	OpenScreen("Home");
     }
 
     public bool HaveCamera() { return (WebCamTexture.devices.Length > 0) ? true : false; }
