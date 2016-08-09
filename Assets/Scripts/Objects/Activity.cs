@@ -8,10 +8,7 @@ public class Activity {
 	public string name,
 				  description,
 				  type,
-				  location,
-				  coord_start,
-				  coord_mid,
-				  coord_end;
+				  location;
 
 	public bool gps_enabled,
 			    photo_enabled,

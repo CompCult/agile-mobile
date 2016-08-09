@@ -5,6 +5,7 @@ public class Team {
 
 	public string name,
 				  slug,
+				  participants,
 				  created_at,
 				  updated_at;
 

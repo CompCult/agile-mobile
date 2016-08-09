@@ -53,7 +53,7 @@ public class ActivityQuiz : Screen {
 		OpenScreen("Home");
 
 		ShowCameraImage();
-		Controller.GetLocation();
+		RegisterPlayerCoordinates("Start");
 	}
 	
 	public override void Update()
@@ -72,6 +72,7 @@ public class ActivityQuiz : Screen {
 		}
 	}
 
+	// Sequence: Home - GPS - Media - Voice - End
 	public void OpenScreen(string Screen)
 	{
 		GameObject[] Screens = new GameObject[] {Home, SearchActScreen, 
@@ -79,12 +80,23 @@ public class ActivityQuiz : Screen {
 												QuizHome, GPSScreen, MediaScreen, 
 												VoiceScreen, EndScreen};
 
-		foreach (GameObject ScreenChild in Screens)
+		if (Screen.Equals("GPS Screen") && !Activity.gps_enabled)
+			OpenScreen("Media Screen");
+		else if (Screen.Equals("Media Screen") && !Activity.photo_enabled)
+			OpenScreen("Voice Screen");
+		else if (Screen.Equals("Voice Screen") && !Activity.audio_enabled)
+			OpenScreen("End");
+		else 
 		{
-			if (ScreenChild.name.Equals(Screen))
-				ScreenChild.SetActive(true);
-			else
-				ScreenChild.SetActive(false);
+			foreach (GameObject ScreenChild in Screens)
+			{
+				if (ScreenChild.name.Equals(Screen))
+				{
+					ScreenChild.SetActive(true);
+				}
+				else
+					ScreenChild.SetActive(false);
+			}
 		}
 	}
 
@@ -108,8 +120,8 @@ public class ActivityQuiz : Screen {
 		if (ID.Length < 1)
 			ID = "-1";
 
-		ShowToastMessage("Buscando missão...");
 		Debug.Log("Requesting Quiz/Activity with ID " + ID + "...");
+		Debug.Log("At " + Controller.GetURL() + APIPlace + ID + "/" + Controller.GetKey());
 
 		WWW www = new WWW (Controller.GetURL() + APIPlace + ID + "/" + Controller.GetKey());
 
@@ -191,17 +203,6 @@ public class ActivityQuiz : Screen {
      	OpenScreen("Quiz Home");
      }
 
-     public void CheckCoordsAndContinue()
-     {
-     	if (CoordStart == null || CoordMid == null || CoordEnd == null)
-     	{
-     		ShowToastMessage("Você não marcou as três localizações");
-     		Debug.Log("As três localizações não foram marcadas");
-     	}
-     	else
-     		OpenScreen("Media Screen");
-     }
-
     private void ShowCameraImage()
 	{
 		CameraField.GetComponent<Renderer>().material.mainTexture = null;
@@ -251,26 +252,42 @@ public class ActivityQuiz : Screen {
     	OpenScreen("End");
     }
 
-    public void RegisterPlayerCoordinates(string Step)
+     public void CheckCoordsAndContinue()
+     {
+     	if (CoordStart == null || CoordMid == null || CoordEnd == null)
+     	{
+     		ShowToastMessage("Você não marcou as três localizações");
+     		Debug.Log("As três localizações não foram marcadas");
+     	}
+     	else
+     	{
+     		OpenScreen("Media Screen");
+     	}
+     }
+
+    public IEnumerator RegisterPlayerCoordinates(string Step)
     {
-    	if (Controller.GetLocation() == null || Controller.GetLocation()[0] == null)
+    	yield return StartCoroutine(Controller.UpdatePlayerLocation());
+
+    	// Retrieve the user location
+    	if (Controller.GetLocation() == null)
 		{
-			ShowToastMessage("Ative o serviço de localização");
-			Debug.Log("Falha ao obter sua localização");
-			return;
+			ShowToastMessage("Verifique o serviço de localização do celular");
+			Debug.Log("Falha ao obter sua localização!");
+
+			yield return StartCoroutine(Controller.UpdatePlayerLocation());
 		}
 
     	string PlayerLocation = Controller.GetLocation()[0] + " | " + Controller.GetLocation()[1];
-
-    	if (PlayerLocation == null)
-    		return;
 
     	if (Step.Equals("coord_start"))
     		CoordStart = PlayerLocation;
     	else if (Step.Equals("coord_mid"))
     		CoordMid = PlayerLocation;
-    	else
+    	else if (Step.Equals("coord_end"))
     		CoordEnd = PlayerLocation;
+
+    	ShowToastMessage("Local registrado");
     }
 
     public void RecordMicrophone() 
@@ -344,10 +361,13 @@ public class ActivityQuiz : Screen {
     	if (QuestSent)
     		return;
 
+    	Debug.Log("Sending activity...");
+		ShowToastMessage("Enviando pergaminho...");
+
     	QuestSent = true;
+    	APIPlace = "/activity/post/";
 
     	WWWForm form = new WWWForm ();
-
     	form.AddField("group_id", Controller.GetTeam().id);
     	
     	if (isQuiz)
@@ -390,9 +410,6 @@ public class ActivityQuiz : Screen {
 		}
 
 		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey(), form);
-
-		Debug.Log("Sending activity...");
-		ShowToastMessage("Enviando pergaminho...");
 
 		StartCoroutine(SendQuestForm(www));
     }

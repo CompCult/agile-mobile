@@ -27,19 +27,13 @@ public class Controller : MonoBehaviour {
         return JsonUtility.FromJson<Team>(JSON);
     }
 
-	private IEnumerator ReceiveCurrentLocationFromGPS()
+	public IEnumerator UpdatePlayerLocation()
     {
-    	Location = null;
-        Screen ScreenSystem = GameObject.Find("ScreenSystem").GetComponent<Screen>();
-
-        Debug.Log("Coletando localização...");
+        Location = null;
 
         // First, check if user has location service enabled
         if (!Input.location.isEnabledByUser)
-        {
-            ScreenSystem.ShowToastMessage("Ative o serviço de localização");
-            return false;
-        }
+            yield break;
 
         // Start service before querying location
         Input.location.Start();
@@ -54,22 +48,24 @@ public class Controller : MonoBehaviour {
 
         // Service didn't initialize in 20 seconds
         if (maxWait < 1)
+        {
+            Debug.Log("Timed out while trying to get device location");
             yield break;
+        }
 
         // Connection has failed
         if (Input.location.status == LocationServiceStatus.Failed)
         {
-            ScreenSystem.ShowToastMessage("Falha ao receber sua localização");
+            Debug.Log("Unable to determine device location");
             yield break;
         }
         else
         {
-        	Location = new double[2];
-        	
+            Location = new double[2];
+            
             Location[0] = System.Convert.ToDouble(Input.location.lastData.latitude);
             Location[1] = System.Convert.ToDouble(Input.location.lastData.longitude);
 
-            ScreenSystem.ShowToastMessage("Localização coletada");
             Debug.Log("Localization registered!");
         }
 
@@ -80,5 +76,5 @@ public class Controller : MonoBehaviour {
      public Team GetTeam() { return Team; }
      public string GetURL() { return URL; }
      public string GetKey() { return Key; }
-     public double[] GetLocation() { ReceiveCurrentLocationFromGPS(); return Location; }
+     public double[] GetLocation() { return Location; }
 }
