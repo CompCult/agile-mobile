@@ -265,9 +265,14 @@ public class ActivityQuiz : Screen {
      	}
      }
 
-    public IEnumerator RegisterPlayerCoordinates(string Step)
+    public void RegisterPlayerCoordinates(string Step)
     {
-    	yield return StartCoroutine(Controller.UpdatePlayerLocation());
+    	StartCoroutine(ReceivePlayerCoordinates(Step));
+    }
+
+    private IEnumerator ReceivePlayerCoordinates(string Step)
+    {
+    	yield return StartCoroutine(Controller.ReceivePlayerLocation());
 
     	// Retrieve the user location
     	if (Controller.GetLocation() == null)
@@ -275,19 +280,21 @@ public class ActivityQuiz : Screen {
 			ShowToastMessage("Verifique o serviço de localização do celular");
 			Debug.Log("Falha ao obter sua localização!");
 
-			yield return StartCoroutine(Controller.UpdatePlayerLocation());
+			yield return StartCoroutine(Controller.ReceivePlayerLocation());
 		}
+		else
+		{
+	    	string PlayerLocation = Controller.GetLocation()[0] + " | " + Controller.GetLocation()[1];
 
-    	string PlayerLocation = Controller.GetLocation()[0] + " | " + Controller.GetLocation()[1];
+	    	if (Step.Equals("coord_start"))
+	    		CoordStart = PlayerLocation;
+	    	else if (Step.Equals("coord_mid"))
+	    		CoordMid = PlayerLocation;
+	    	else if (Step.Equals("coord_end"))
+	    		CoordEnd = PlayerLocation;
 
-    	if (Step.Equals("coord_start"))
-    		CoordStart = PlayerLocation;
-    	else if (Step.Equals("coord_mid"))
-    		CoordMid = PlayerLocation;
-    	else if (Step.Equals("coord_end"))
-    		CoordEnd = PlayerLocation;
-
-    	ShowToastMessage("Local registrado");
+	    	ShowToastMessage("Local registrado");
+    	}
     }
 
     public void RecordMicrophone() 
@@ -356,13 +363,18 @@ public class ActivityQuiz : Screen {
 		return data;
 	}
 
-    public void PrepareSendQuestForm()
+	public void PrepareSendQuest()
+	{
+		StartCoroutine(PrepareSendQuestForm());
+	}
+
+    private IEnumerator PrepareSendQuestForm()
     {
     	if (QuestSent)
-    		return;
+    		yield break;
 
     	Debug.Log("Sending activity...");
-		ShowToastMessage("Enviando pergaminho...");
+		ShowToastMessage("Enviando pergaminho... Isso pode demorar.");
 
     	QuestSent = true;
     	APIPlace = "/activity/post/";
@@ -425,7 +437,7 @@ public class ActivityQuiz : Screen {
         {
 	        Debug.Log("Response: " + JSON);
 
-	        ShowToastMessage("Pergaminho enviado!");
+	        ShowToastMessage("Pergaminho enviado");
     		OpenScreen("Home");
         }
         else

@@ -27,7 +27,7 @@ public class Controller : MonoBehaviour {
         return JsonUtility.FromJson<Team>(JSON);
     }
 
-	public IEnumerator UpdatePlayerLocation()
+	public IEnumerator ReceivePlayerLocation()
     {
         Location = null;
 
