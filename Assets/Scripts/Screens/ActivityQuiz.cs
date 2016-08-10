@@ -29,6 +29,7 @@ public class ActivityQuiz : Screen {
 	[Header("Quiz screen elements")]
 	public Text QuizName, QuizDescription, Alt1, Alt2, Alt3, Alt4;
 	[Header("Audio screen elements")]
+	public Text AudioScreenName;
     private bool micConnected = false;
     private int minFreq;
     private int maxFreq;
@@ -53,7 +54,6 @@ public class ActivityQuiz : Screen {
 		OpenScreen("Home");
 
 		ShowCameraImage();
-		RegisterPlayerCoordinates("Start");
 	}
 	
 	public override void Update()
@@ -180,6 +180,7 @@ public class ActivityQuiz : Screen {
 
      	QuestHomeName.text = Activity.name;
      	QuestHomeDescription.text = Activity.description;
+     	AudioScreenName.text = Activity.name;
      	QuestHomePlace.text = Activity.location;
 
      	GPSScreenName.text = Activity.name;
@@ -299,7 +300,7 @@ public class ActivityQuiz : Screen {
 
     public void RecordMicrophone() 
     {
-    	if(Microphone.devices.Length <= 0)
+    	if (Microphone.devices.Length <= 0)
         {
             Debug.Log("Microphone not connected!");
             ShowToastMessage("Nenhum microfone encontrado");
@@ -414,7 +415,8 @@ public class ActivityQuiz : Screen {
 
 		if (AudioSample != null)
 		{
-			form.AddBinaryData("audio", AudioSample, "audio.wav", "sound/wav");
+			form.AddBinaryData("audio", AudioSample, "speech.wav", "audio/wav");
+			Debug.Log("Voz registrada");
 		}
 		else
 		{

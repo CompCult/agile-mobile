@@ -60,7 +60,7 @@ public class Ranking : Screen {
         	teamList.Add(team);
         }
 
-        teamList.Sort((x, y) => x.total_points.CompareTo(y.total_points));
+        teamList.Sort((x, y) => y.total_points.CompareTo(x.total_points));
 
         CreateTeamsCard();
      }
