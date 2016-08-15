@@ -2,69 +2,60 @@
 using UnityEngine.UI;
 using System.Collections;
 
-public class Home : Screen {
-
-	public Text TeamNameField, GoldCoinsField, SilverCoinsField;
-	public Image TeamEmblem;
+public class Home : Screen 
+{
+	public Text teamNameField, goldCoinsField, silverCoinsField;
+	public Image teamEmblem;
+	private IEnumerator UpdateTeamLoop;
 
 	public void Start() 
 	{
-		Controller = GameObject.Find("Controller").GetComponent<Controller>();
-		APIPlace = "/auth/";
-		BackScene = "Login";
+		backScene = "Login";
+		nextScene = "Home";
 
-		UpdateFieldsOnScreen();
-		UpdateTeamInfo();
+		UpdateTeamLoop = UpdateTeamInformation ();
+		UpdateFieldsOnScreen ();
 	}
 
 	private void UpdateFieldsOnScreen()
 	{
-		int GoldCoins = Controller.GetTeam().gold_coins,
-			SilverCoins = Controller.GetTeam().silver_coins;
+		string teamName = UsrManager.team.name;
+		int goldCoins = UsrManager.team.gold_coins,
+		silverCoins = UsrManager.team.silver_coins;
 
-		string TeamName = Controller.GetTeam().name;
-
-		GoldCoinsField.text = GoldCoins.ToString();
-		SilverCoinsField.text = SilverCoins.ToString();
-		TeamNameField.text = TeamName;
+		goldCoinsField.text = goldCoins.ToString();
+		silverCoinsField.text = silverCoins.ToString();
+		teamNameField.text = teamName;
 
 		SpriteRenderer sr = gameObject.GetComponent<SpriteRenderer>();
-        sr.sprite = Resources.Load<Sprite>("Emblem/" + TeamName);
+        sr.sprite = Resources.Load<Sprite>("Emblem/" + teamName);
 
-        TeamEmblem.sprite = sr.sprite;
+        teamEmblem.sprite = sr.sprite;
+
+		StopCoroutine (UpdateTeamLoop);
+		StartCoroutine (UpdateTeamLoop);
 	}
 
-	public void UpdateTeamInfo() 
+	private IEnumerator UpdateTeamInformation()
 	{
-		string teamNameInSlug = TransformInSlug(Controller.GetTeam().name);
-		int teamPIN = Controller.GetTeam().pin;
+		string pin = UsrManager.team.pin.ToString(),
+		team = UsrManager.team.slug;
 
-		WWWForm form = new WWWForm ();
-		form.AddField ("slug", teamNameInSlug);
-		form.AddField ("pin", teamPIN);
-		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey(), form);
+		yield return new WaitForSeconds (30);
+		WWW updateRequest = Authenticator.RequestTeam (pin, team);
 
-		Debug.Log("Updating team info...");
-		StartCoroutine(SendUpdateTeamInfoRequest(www));
+		if (!WebFunctions.haveError (updateRequest)) 
+		{
+			Debug.Log ("Updated team info.");
+
+			UsrManager.UpdateTeam (updateRequest.text);
+			LoadNextScene (); // Reload current scene
+		} 
+		else 
+		{
+			Debug.Log ("Failed to update team info.");
+			UpdateFieldsOnScreen ();
+		}
 	}
- 
-    private IEnumerator SendUpdateTeamInfoRequest(WWW www)
-    {
-        yield return www;
-        
-        string JSON = www.text,
-        	   Error = www.error;
 
-        if (Error == null)
-        {
-	        Debug.Log("Team info updated");
-	        
-	        Controller.UpdateTeam(JSON);
-	        UpdateFieldsOnScreen();
-        }
-        else
-        {
-        	Debug.Log("Error on updating team info: " + Error);
-        }
-     } 
 }

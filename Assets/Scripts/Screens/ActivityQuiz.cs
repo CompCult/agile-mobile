@@ -1,455 +1,259 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
-public class ActivityQuiz : Screen {
+public class ActivityQuiz : Screen 
+{
+	[Header("Screens")]
+	public GameObject[] internalScreens;
+	public GameObject currentScreen;
 
-	public GameObject Home, 
-			 		  SearchActScreen,
-			 		  SearchQuizScreen, 
-			 		  QuestHome, 
-			 		  QuizHome,
-			 		  GPSScreen, 
-			 		  MediaScreen,
-			 		  VoiceScreen,
-			 		  EndScreen,
-			 		  CameraField;
+	[Header("Inputs")]
+	public InputField activityID,
+	quizID;
 
-	public InputField ActivityID,
-					  QuizID;
+	[Header("Activity Screen Elements")]
+	public Text activityHomeName,
+	activityHomeDescription,
+	activityHomeLocation;
 
-	[Header("Quest screen elements")]
-	public Text QuestHomeName, QuestHomeDescription, QuestHomePlace;
-	[Header("GPS screen elements")]
-	public Text GPSScreenName;
-	[Header("Photo screen elements")]
-	public Text MediaScreenName;
-	[Header("Quiz screen elements")]
-	public Text QuizName, QuizDescription, Alt1, Alt2, Alt3, Alt4;
-	[Header("Audio screen elements")]
-	public Text AudioScreenName;
-    private bool micConnected = false;
-    private int minFreq;
-    private int maxFreq;
-    public AudioSource SampleAudioSource, RecordedAudio;
+	[Header("Quiz Screen Elements")]
+	public Text quizName,
+	quizDescription,
+	alt1, alt2, alt3, alt4;
 
-	[Header("Quest objects")]
-	private Activity Activity;
-	private Quiz Quiz;
-	private WebCamTexture MobileCamera;
+	[Header("Voice Screen Elements")]
+	public AudioSource audioSource;
 
-	[Header("Responses")]
-	private Texture2D Photo;
-	private byte[] AudioSample;
-	private bool QuestSent, isQuiz;
-	private string QuizStatus, CoordStart, CoordMid, CoordEnd;
+	[Header("Camera Scren Elements")]
+	public GameObject cameraField;
 
 	public void Start () 
 	{
-		Controller = GameObject.Find("Controller").GetComponent<Controller>();
-		
-		BackScene = "Home";
-		OpenScreen("Home");
+		nextScene = "ActivityQuiz";
+		backScene = "Home";
 
-		ShowCameraImage();
+		ClearPreviousVoice ();
+
+		StartCamera ();
+		OpenScreen("Home");
 	}
 	
 	public override void Update()
 	{
 		if (Input.GetKeyUp(KeyCode.Escape)) 
 		{
-			if (Home.activeSelf)
+			if (currentScreen.name.Equals ("Home")) 
 			{
-				CameraField.GetComponent<Renderer>().material.mainTexture = null;
-            	MobileCamera.Stop();
-
-				LoadScene();
+				CameraDevice.StopCameraImage ();
+				LoadBackScene ();
 			}
-			else
+				else
 				OpenScreen("Home");
 		}
 	}
 
-	// Sequence: Home - GPS - Media - Voice - End
-	public void OpenScreen(string Screen)
+	private void ClearPreviousVoice()
 	{
-		GameObject[] Screens = new GameObject[] {Home, SearchActScreen, 
-												SearchQuizScreen, QuestHome, 
-												QuizHome, GPSScreen, MediaScreen, 
-												VoiceScreen, EndScreen};
+		var filepath = Path.Combine(Application.dataPath, "voice.wav");
 
-		if (Screen.Equals("GPS Screen") && !Activity.gps_enabled)
+		if (System.IO.File.Exists(filepath))
+			System.IO.File.Delete (filepath); // Deletes previous voice files loaded
+	}
+
+	// Sequence: Home - GPS - Media - Voice - End
+	public void OpenScreen(string screen)
+	{
+		if (screen.Equals("GPS Screen") && !QuestManager.activity.gps_enabled)
 			OpenScreen("Media Screen");
-		else if (Screen.Equals("Media Screen") && !Activity.photo_enabled)
+		else if (screen.Equals("Media Screen") && !QuestManager.activity.photo_enabled)
 			OpenScreen("Voice Screen");
-		else if (Screen.Equals("Voice Screen") && !Activity.audio_enabled)
+		else if (screen.Equals("Voice Screen") && !QuestManager.activity.audio_enabled)
 			OpenScreen("End");
 		else 
 		{
-			foreach (GameObject ScreenChild in Screens)
+			foreach (GameObject screenChild in internalScreens) 
 			{
-				if (ScreenChild.name.Equals(Screen))
+				if (screenChild.name.Equals (screen))
 				{
-					ScreenChild.SetActive(true);
-				}
+					currentScreen = screenChild;
+					screenChild.SetActive (true);
+
+					if (screen.Equals ("Media Screen"))
+						CameraDevice.ShowCameraImage ();
+					else
+						CameraDevice.StopCameraImage ();
+				} 
 				else
-					ScreenChild.SetActive(false);
+					screenChild.SetActive (false);
 			}
+
 		}
 	}
 
-	public void PrepareQuestForm(string Type) 
+	public void ReceiveQuest(string type)
 	{
-		string ID = null;
+		string ID, url;
 
-		if (Type.Equals("Activity"))
+		if (type.Equals("Activity"))
 		{
-			ID = ActivityID.text;
-			APIPlace = "/activity/get/";
-			isQuiz = false;
+			ID = activityID.text;
+			WebFunctions.apiPlace = "/activity/get/";
 		}
-		else
+		else 
 		{
-			ID = QuizID.text;
-			APIPlace = "/quiz/get/";
-			isQuiz = true;
+			ID = quizID.text;
+			WebFunctions.apiPlace = "/quiz/get/";
 		}
 
 		if (ID.Length < 1)
 			ID = "-1";
+				
+		url =  WebFunctions.url + WebFunctions.apiPlace + ID + "/" + WebFunctions.pvtKey;
 
-		Debug.Log("Requesting Quiz/Activity with ID " + ID + "...");
-		Debug.Log("At " + Controller.GetURL() + APIPlace + ID + "/" + Controller.GetKey());
+		WWW questForm = WebFunctions.Get (url);
+		if (!WebFunctions.haveError (questForm)) 
+		{
+			ClearPreviousVoice ();
 
-		WWW www = new WWW (Controller.GetURL() + APIPlace + ID + "/" + Controller.GetKey());
+			if (type.Equals ("Activity")) 
+			{
+				QuestManager.UpdateActivity (questForm.text);
+				QuestManager.activityResponse.activity_id = QuestManager.activity.id;
+				QuestManager.activityResponse.group_id = UsrManager.team.id;
 
-		StartCoroutine(ReadQuestForm(www, Type));
+				StartActivity ();
+			} 
+			else 
+			{
+				QuestManager.UpdateQuiz (questForm.text);
+				QuestManager.quizResponse.quiz_id = QuestManager.quiz.id;
+				QuestManager.quizResponse.group_id = UsrManager.team.id;
+
+				StartQuiz ();
+			}
+		}
 	}
 
-	private IEnumerator ReadQuestForm(WWW www, string Type)
-    {
-        yield return www;
-        
-        string JSON = www.text;
-        string Error = www.error;
-
-        if (Error == null)
-        {
-	        Debug.Log("Response: " + JSON);
-
-	        if (Type.Equals("Activity"))
-	        {
-	        	Activity = JsonUtility.FromJson<Activity>(JSON);
-	        	StartActivity();
-	        }
-	        else
-	        {
-	        	Quiz = JsonUtility.FromJson<Quiz>(JSON);
-	        	StartQuiz();
-	        }
-        }
-        else
-        {
-        	Debug.Log("Error: " + Error);
-
-        	if (Error.Contains("404"))
-        		ShowToastMessage("Missão não encontrada");
-        	else
-        		ShowToastMessage("Falha no servidor");
-        }
-     } 
-
-     private void ClearPreviousQuests()
-     {
-     	Photo = null;
-		AudioSample = null;
-		QuestSent = false;
-		QuizStatus = null;
-		CoordStart = null;
-		CoordMid = null;
-		CoordEnd = null;
-
-		Debug.Log("Atividades anteriores foram limpas");
-     }
-
-     private void StartActivity()
-     {
-     	ClearPreviousQuests();
-
-     	QuestHomeName.text = Activity.name;
-     	QuestHomeDescription.text = Activity.description;
-     	AudioScreenName.text = Activity.name;
-     	QuestHomePlace.text = Activity.location;
-
-     	GPSScreenName.text = Activity.name;
-     	MediaScreenName.text = Activity.name;
-
-     	OpenScreen("Quest Home");
-     }
-
-     private void StartQuiz()
-     {
-     	ClearPreviousQuests();
-
-     	QuizName.text = Quiz.name;
-     	QuizDescription.text = Quiz.question;
-
-     	Alt1.text = Quiz.option_1;
-     	Alt2.text = Quiz.option_2;
-     	Alt3.text = Quiz.option_3;
-     	Alt4.text = Quiz.option_4;
-
-     	OpenScreen("Quiz Home");
-     }
-
-    private void ShowCameraImage()
+	private void StartActivity()
 	{
-		CameraField.GetComponent<Renderer>().material.mainTexture = null;
-			
-		if (MobileCamera != null)
-			MobileCamera.Stop();
-		
-		MobileCamera = new WebCamTexture();
-        CameraField.GetComponent<Renderer>().material.mainTexture = MobileCamera;
+		activityHomeName.text = QuestManager.activity.name;
+		activityHomeDescription.text = QuestManager.activity.description;
+		activityHomeLocation.text = QuestManager.activity.location;
 
-        if (HaveCamera())
-            MobileCamera.Play();
+		OpenScreen ("Activity Home");
 	}
 
-    public void TrySendPhoto()
-    {
-        if (HaveCamera())
-            StartCoroutine(RecordPhoto());
-        else
-        	OpenScreen("Voice Screen");
-    }
-
-    private IEnumerator RecordPhoto()
-    {
-        yield return new WaitForEndOfFrame(); 
-
-		// Creates a texture to hold the photo
-        Photo = new Texture2D(MobileCamera.width, MobileCamera.height);
-        Photo.SetPixels(MobileCamera.GetPixels());
-        Photo.Apply();
-
-        CameraField.GetComponent<Renderer>().material.mainTexture = Photo;
-
-        ShowToastMessage("Foto capturada");
-
-        ShowCameraImage();
-        OpenScreen("Voice Screen");
-    }
-
-    public void AnswerQuiz(string Answer)
-    {
-    	QuizStatus = "Errou";
-
-    	if (Quiz.correct.Equals(Answer))
-    		QuizStatus = "Acertou";
-
-    	OpenScreen("End");
-    }
-
-     public void CheckCoordsAndContinue()
-     {
-     	if (CoordStart == null || CoordMid == null || CoordEnd == null)
-     	{
-     		ShowToastMessage("Você não marcou as três localizações");
-     		Debug.Log("As três localizações não foram marcadas");
-     	}
-     	else
-     	{
-     		OpenScreen("Media Screen");
-     	}
-     }
-
-    public void RegisterPlayerCoordinates(string Step)
-    {
-    	StartCoroutine(ReceivePlayerCoordinates(Step));
-    }
-
-    private IEnumerator ReceivePlayerCoordinates(string Step)
-    {
-    	yield return StartCoroutine(Controller.ReceivePlayerLocation());
-
-    	// Retrieve the user location
-    	if (Controller.GetLocation() == null)
-		{
-			ShowToastMessage("Verifique o serviço de localização do celular");
-			Debug.Log("Falha ao obter sua localização!");
-
-			yield return StartCoroutine(Controller.ReceivePlayerLocation());
-		}
-		else
-		{
-	    	string PlayerLocation = Controller.GetLocation()[0] + " | " + Controller.GetLocation()[1];
-
-	    	if (Step.Equals("coord_start"))
-	    		CoordStart = PlayerLocation;
-	    	else if (Step.Equals("coord_mid"))
-	    		CoordMid = PlayerLocation;
-	    	else if (Step.Equals("coord_end"))
-	    		CoordEnd = PlayerLocation;
-
-	    	ShowToastMessage("Local registrado");
-    	}
-    }
-
-    public void RecordMicrophone() 
-    {
-    	if (Microphone.devices.Length <= 0)
-        {
-            Debug.Log("Microphone not connected!");
-            ShowToastMessage("Nenhum microfone encontrado");
-        }
-        else 
-        {
-            micConnected = true;
-            Microphone.GetDeviceCaps(null, out minFreq, out maxFreq);
-                        
-            if(minFreq == 0 && maxFreq == 0)
-                maxFreq = 44100;
-        }
-
-        if(micConnected)
-        {
-            if(!Microphone.IsRecording(null))
-            {
-            	Debug.Log("Clique novamente para parar a gravação");
-            	ShowToastMessage("Clique novamente para parar a gravação");
-                SampleAudioSource.clip = Microphone.Start(null, true, 20, maxFreq);
-            }
-            else //Recording is in progress
-            {
-                Microphone.End(null); //Stop the audio recording
-                AudioClip source = SampleAudioSource.clip;
-                float[] samples = new float[SampleAudioSource.clip.samples * SampleAudioSource.clip.channels];
-                source.GetData(samples, 0);
-
-                // Copy the float data into a byte array
-                AudioSample = new byte[samples.Length * 4];
-				Buffer.BlockCopy(samples, 0, AudioSample, 0, AudioSample.Length);
-
-				ShowToastMessage("Voz gravada com sucesso");
-            }            
-        }
-    }
-
-    public void PlayRecordedSound()
-    {
-    	if (AudioSample == null)
-    		ShowToastMessage("Nenhum som gravado");
-
-		float[] f = ConvertByteToFloat(AudioSample);
-		AudioClip audioClip = AudioClip.Create("testSound", f.Length, 1, 44100, false, false);
-		audioClip.SetData(f, 0);
-
-		RecordedAudio.clip = audioClip;
-		if (Application.platform != RuntimePlatform.Android)
-			RecordedAudio.pitch = 2.2f;
-		else
-			RecordedAudio.pitch = 1;
-
-		RecordedAudio.Play();
-    }
-
-    public float[] ConvertByteToFloat(byte[] array)
+	private void StartQuiz()
 	{
-		float[] data = new float[array.Length / 4];
-		Buffer.BlockCopy(array, 0, data, 0, array.Length);
+		quizName.text = QuestManager.quiz.name;
+		quizDescription.text = QuestManager.quiz.question;
 
-		return data;
+		alt1.text = QuestManager.quiz.option_1;
+		alt2.text = QuestManager.quiz.option_2;
+		alt3.text = QuestManager.quiz.option_3;
+		alt4.text = QuestManager.quiz.option_4;
+
+		OpenScreen("Quiz Home");
 	}
 
-	public void PrepareSendQuest()
+	public void RequestCoordinates(string step)
 	{
-		StartCoroutine(PrepareSendQuestForm());
+		AndroidToast.ShowMessage ("Obtendo localização...");
+		GPS.ReceivePlayerLocation ();
+
+		if (GPS.location == null)
+			return;
+
+		string playerLocation = GPS.location[0] + " | " + GPS.location[1];
+
+		switch (step) 
+		{
+		case "coord_start":
+			QuestManager.activityResponse.coord_start = playerLocation;
+			break;
+		case "coord_mid":
+			QuestManager.activityResponse.coord_mid = playerLocation;
+			break;
+		case "coord_end":
+			QuestManager.activityResponse.coord_end = playerLocation;
+			break;
+		}
 	}
 
-    private IEnumerator PrepareSendQuestForm()
-    {
-    	if (QuestSent)
-    		yield break;
-
-    	Debug.Log("Sending activity...");
-		ShowToastMessage("Enviando pergaminho... Isso pode demorar.");
-
-    	QuestSent = true;
-    	APIPlace = "/activity/post/";
-
-    	WWWForm form = new WWWForm ();
-    	form.AddField("group_id", Controller.GetTeam().id);
-    	
-    	if (isQuiz)
-    	{
-			form.AddField ("quiz_id", Quiz.id);
-			Debug.Log("Quiz ID: " + Quiz.id);
-			form.AddField("quiz_correct", QuizStatus);
-			Debug.Log("Quiz Status: " + QuizStatus);
-    	}
-		else
+	public void CheckCoordsAndContinue()
+	{
+		if (QuestManager.AreCoordsFilled ()) 
 		{
-			form.AddField ("activity_id", Activity.id);
-			Debug.Log("Atividade: " + Activity.id);
-			
-			form.AddField ("location", Activity.location);
-			Debug.Log("Local: " + Activity.location);
-
-			form.AddField ("coord_start", CoordStart);
-			form.AddField ("coord_mid", CoordMid);
-			form.AddField ("coord_end", CoordEnd);
-		}
-
-		if (Photo != null)
-		{
-			form.AddBinaryData("photo", Photo.EncodeToPNG(), "Photo.png", "image/png");
-			Debug.Log("Foto registrada");
+			AndroidToast.ShowMessage ("Coordenadas preenchidas");
+			OpenScreen ("Media Screen");
 		}
 		else
-		{
-			Debug.Log("Foto não registrada");
-		}
+			AndroidToast.ShowMessage ("Coordenadas não preenchidas");
+	}
 
-		if (AudioSample != null)
-		{
-			form.AddBinaryData("audio", AudioSample, "speech.wav", "audio/wav");
-			Debug.Log("Voz registrada");
-		}
+	public void StartCamera()
+	{
+		CameraDevice.cameraPlane = cameraField;
+		CameraDevice.ShowCameraImage ();
+	}
+
+	public void CapturePhoto()
+	{
+		CameraDevice.RecordPhoto ();
+		QuestManager.activityResponse.photo = CameraDevice.Photo.EncodeToPNG ();
+
+		new WaitForSeconds (4);
+
+		OpenScreen ("Voice Screen");
+	}
+
+	public void RegisterQuizAnswer(string answer)
+	{
+		QuestManager.RegisterQuizResponse (answer);
+
+		OpenScreen ("End");
+	}
+
+	public void RecordMicrophone()
+	{
+		AudioRec.audioSource = audioSource;
+		AudioRec.RecordAudio ();
+	}
+
+	public void ListenAudio()
+	{
+		AudioRec.ListenAudio ();
+	}
+
+	public void CheckVoiceAndContinue()
+	{
+		if (!AudioRec.isRecorded())
+			AndroidToast.ShowMessage("Nenhuma voz gravada");
 		else
 		{
-			Debug.Log("Voz não registrada");
+			var filepath = Path.Combine(Application.dataPath, "voice.wav");
+			QuestManager.activityResponse.audio = System.IO.File.ReadAllBytes(filepath);
+
+			OpenScreen("End");
 		}
+	}
 
-		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey(), form);
+	public void SendQuestForm()
+	{
+		WWW response;
 
-		StartCoroutine(SendQuestForm(www));
-    }
+		if (QuestManager.activity != null)
+			response = QuestManager.SendActivity ();
+		else
+			response = QuestManager.SendQuiz ();
 
-    private IEnumerator SendQuestForm(WWW www)
-    {
-    	yield return www;
-        
-        string JSON = www.text;
-        string Error = www.error;
+		if (!WebFunctions.haveError (response))
+			Debug.Log ("Resposta: " + response.text);
 
-        if (Error == null)
-        {
-	        Debug.Log("Response: " + JSON);
-
-	        ShowToastMessage("Pergaminho enviado");
-    		OpenScreen("Home");
-        }
-        else
-        {
-        	Debug.Log("Error: " + Error);
-        	
-        	ShowToastMessage("Falha ao enviar pergaminho");
-        	QuestSent = false;
-        }
-    }
-
-    public bool HaveCamera() { return (WebCamTexture.devices.Length > 0) ? true : false; }
+		OpenScreen ("Home");
+	}
 }
