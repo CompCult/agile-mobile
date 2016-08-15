@@ -2,7 +2,7 @@
 using System;
 using System.Collections;
 
-public class Authenticator
+public static class Authenticator
 {
 	public static WWW RequestTeam (string pin, string team) 
 	{

@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class UsrManager
+public static class UsrManager
 {
 	private static Team _team;
 	public static Team team { get { return _team; } }

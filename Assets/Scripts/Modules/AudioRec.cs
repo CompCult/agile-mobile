@@ -3,7 +3,7 @@ using System.IO;
 using UnityEngine;
 using System.Collections.Generic;
 
-public class AudioRec 
+public static class AudioRec 
 {
 	public static AudioSource audioSource;
 	private static bool micConnected = false;

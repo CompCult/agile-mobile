@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class WebFunctions
+public static class WebFunctions
 {
-	protected static string _url = "http://agile-admin-dev.herokuapp.com/api",
+	private static string _url = "http://agile-admin-dev.herokuapp.com/api",
 	_pvtKey = "c64620ce5b6ef7c901c947cd38314e279421d489",
 	_apiPlace = "/";
 

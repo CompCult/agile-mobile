@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class AndroidToast
+public static class AndroidToast
 {
 	private static AndroidJavaObject AndroidObjectActivity;
 	private static string toastMessage;

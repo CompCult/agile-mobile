@@ -3,7 +3,7 @@ using UnityEngine.SceneManagement;
 using System;
 using System.Collections;
 
-public class GPS 
+public static class GPS 
 {
 	private static double[] _location;
 	public static double[] location { get { return _location; } }

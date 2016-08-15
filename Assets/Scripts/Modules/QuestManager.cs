@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class QuestManager
+public static class QuestManager
 {
 	private static Activity _activity;
 	private static ActivityResponse _activityResponse;

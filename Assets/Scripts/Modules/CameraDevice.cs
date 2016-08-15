@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class CameraDevice
+public static class CameraDevice
 {
 	public static GameObject cameraPlane;
 	private static WebCamTexture cameraDevice;
