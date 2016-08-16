@@ -1,62 +1,40 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 
-public class Login : Screen {
-
-	public Dropdown TeamSelector;
-	public InputField PINField;
+public class Login : Screen 
+{
+	[Header("Screen elements")]
+	public Dropdown teamSelector;
+	public InputField pinField;
 
 	public void Start() 
 	{
-		Controller = GameObject.Find("Controller").GetComponent<Controller>();
-		
-		APIPlace = "/auth/";
-		NextScene = "Home";
-		BackScene = null;
+		nextScene = "Home";
+		backScene = null;
+		UnityAndroidExtras.instance.Init();
 	}
 
-	public void CreateLoginForm() 
+	public void SignIn()
 	{
-		string PIN = PINField.text,
-			   Team = TransformInSlug(TeamSelector.captionText.text);
+		string pin = pinField.text,
+		team = teamSelector.captionText.text;
 
-		if (PIN.Length < 1)
-			PIN = "1";
+		UnityAndroidExtras.instance.makeToast("Conectando...", 1);
 
-		WWWForm form = new WWWForm ();
-		form.AddField ("slug", Team);
-		form.AddField ("pin", PIN);
-		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey(), form);
+		WWW loginRequest = Authenticator.RequestTeam (pin, team);
 
-		Debug.Log("Trying to connect...");
-		ShowToastMessage("Conectando...");
-
-		StartCoroutine(SendLoginForm(www));
+		processLogin (loginRequest);
 	}
- 
-    private IEnumerator SendLoginForm(WWW www)
-    {
-        yield return www;
-        
-        string JSON = www.text;
-        string Error = www.error;
 
-        if (Error == null)
-        {
-	        Debug.Log("Response: " + JSON);
+	public void processLogin (WWW loginRequest)
+	{
+		if (!WebFunctions.haveError(loginRequest)) 
+		{
+			Debug.Log ("Recebido: " + loginRequest.text);
 
-	       	Controller.UpdateTeam(JSON);
-	       	LoadScene(NextScene);
-        }
-        else
-        {
-        	Debug.Log("Error: " + Error);
-
-        	if (Error.Contains("invalid pin"))
-        		ShowToastMessage("PIN inválido");
-        }
-     } 
+			UsrManager.UpdateTeam (loginRequest.text);
+			base.LoadNextScene ();
+		} 
+	}
 }
