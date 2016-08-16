@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 public class Ranking : Screen 
 {
-	public GameObject teamCard;
+	public GameObject teamCard, updatingText;
 	public Image teamEmblem, teamMedal, teamBackground;
 	public Text teamName, goldCoins, silverCoins;
 
@@ -74,6 +74,7 @@ public class Ranking : Screen
             Debug.Log(team.ToString());
         }
 
+        updatingText.SetActive(false);
         Destroy(teamCard);
 
 		StartCoroutine (UpdateRanking ());

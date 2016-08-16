@@ -31,6 +31,9 @@ public static class CameraDevice
 
 	public static void RecordPhoto()
 	{
+		if (!HaveCamera())
+			return;
+
 		new WaitForEndOfFrame(); 
 
 		Photo = new Texture2D(cameraDevice.width, cameraDevice.height);

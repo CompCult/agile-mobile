@@ -205,7 +205,8 @@ public class ActivityQuiz : Screen
 	public void CapturePhoto()
 	{
 		CameraDevice.RecordPhoto ();
-		QuestManager.activityResponse.photo = CameraDevice.Photo.EncodeToPNG ();
+		if (CameraDevice.HaveCamera())
+			QuestManager.activityResponse.photo = CameraDevice.Photo.EncodeToPNG();
 
 		new WaitForSeconds (4);
 

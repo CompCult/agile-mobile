@@ -40,8 +40,7 @@ public class SavWav: MonoBehaviour
 
 		var filepath = Path.Combine(Application.persistentDataPath, filename);
 
-		UnityAndroidExtras.instance.makeToast(filepath, 1);
-		Debug.Log(filepath);
+		Debug.Log("Salvo em " + filepath);
 
 		// Make sure directory exists if user is saving to sub dir.
 		Directory.CreateDirectory(Path.GetDirectoryName(filepath));

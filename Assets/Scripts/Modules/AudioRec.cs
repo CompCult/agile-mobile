@@ -23,16 +23,41 @@ public static class AudioRec
 			if(minFreq == 0 && maxFreq == 0)
 				maxFreq = 44100;
 		}
-		if(micConnected)
+		if (micConnected)
 		{
-			if(!Microphone.IsRecording(null))
+			if (!Microphone.IsRecording(null))
 			{
 				UnityAndroidExtras.instance.makeToast("Clique novamente para parar a gravação", 1);
 				audioSource.clip = Microphone.Start(null, true, 20, maxFreq);
 			}
-			else //Recording is in progress
+			else //Recording is in progress, then stop it.
 			{
+				var position = Microphone.GetPosition(null);
+
 				Microphone.End(null); //Stop the audio recording
+
+				var soundData = new float[audioSource.clip.samples * audioSource.clip.channels];
+				audioSource.clip.GetData (soundData, 0);
+				 
+				//Create shortened array for the data that was used for recording
+				var newData = new float[position * audioSource.clip.channels];
+				 
+				//Copy the used samples to a new array
+				for (int i = 0; i < newData.Length; i++) 
+				    newData[i] = soundData[i];
+
+				//Creates a newClip with the correct length
+				var newClip = AudioClip.Create ("voice",
+				                                 position,
+				                                 audioSource.clip.channels,
+				                                 audioSource.clip.frequency,
+				                                 true, false);
+				 
+				newClip.SetData (newData, 0); //Give it the data from the old clip
+				 
+			 	//Replace the old clip
+				AudioClip.Destroy (audioSource.clip);
+				audioSource.clip = newClip;  
 
 				SavWav.instance.Save ("voice", audioSource.clip);
 				UnityAndroidExtras.instance.makeToast("Voz gravada com sucesso", 1);

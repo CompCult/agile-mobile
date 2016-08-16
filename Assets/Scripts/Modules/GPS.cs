@@ -38,7 +38,7 @@ public static class GPS
 			_location[0] = System.Convert.ToDouble(Input.location.lastData.latitude);
 			_location[1] = System.Convert.ToDouble(Input.location.lastData.longitude);
 
-			Debug.Log("Localização obtida");
+			UnityAndroidExtras.instance.makeToast("Localização obtida", 1);
 		}
 			
 		Input.location.Stop();
