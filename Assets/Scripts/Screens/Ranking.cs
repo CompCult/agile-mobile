@@ -1,60 +1,46 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 
-public class Ranking : Screen {
-
-	public GameObject TeamCard;
-	public Image TeamEmblem, TeamMedal, TeamBG;
-	public Text TeamName, GoldCoins, SilverCoins;
+public class Ranking : Screen 
+{
+	public GameObject teamCard, updatingText;
+	public Image teamEmblem, teamMedal, teamBackground;
+	public Text teamName, goldCoins, silverCoins;
 
 	public List<Team> teamList;
 
 	public void Start () 
 	{
-		Controller = GameObject.Find("Controller").GetComponent<Controller>();
-		BackScene = "Home";
-		APIPlace = "/group/get/all/";
+		nextScene = "Ranking";
+		backScene = "Home";
+		UnityAndroidExtras.instance.Init();
 
 		RequestRanking();
 	}
 
 	public void RequestRanking() 
 	{
-		WWW www = new WWW (Controller.GetURL() + APIPlace + Controller.GetKey());
+		WebFunctions.apiPlace = "/group/get/all/";
+		string rankingURL = WebFunctions.url + WebFunctions.apiPlace + WebFunctions.pvtKey;
 
-		Debug.Log("Requesting ranking...");
-		StartCoroutine(SendRankingRequest(www));
+		WWW rankingRequest = WebFunctions.Get (rankingURL);
+		if (!WebFunctions.haveError (rankingRequest))
+			OrderTeams (rankingRequest.text);
+		else
+			UnityAndroidExtras.instance.makeToast("Tente atualizar o ranking novamente", 1);
 	}
  
-    private IEnumerator SendRankingRequest(WWW www)
-    {
-        yield return www;
-        
-        string JSON = www.text,
-        	   Error = www.error;
-
-       	string[] TeamsInJSON = JSON.Replace("[","").Replace("]","").Replace("},{", "}%{").Split('%');
-
-       	if (Error == null)
-       	{
-       		Debug.Log("Teams received");
-        	OrderTeams(TeamsInJSON);
-        }
-        else
-        {
-        	Debug.Log("Error on getting ranking: " + Error);
-        }
-     } 
-
-     private void OrderTeams(string[] TeamsInJSON)
+     private void OrderTeams(string ranking)
      {
+		string[] rankingJSON = ranking.Replace ("[", "").Replace ("]", "").Replace ("},{", "}%{").Split ('%');
      	teamList = new List<Team>();
 
-        foreach(string teamJSON in TeamsInJSON)
+		foreach (string teamJSON in rankingJSON)
         {
-        	Team team = Controller.CreateTeam(teamJSON);
+			Team team = UsrManager.CreateTeamFromJSON(teamJSON);
         	team.total_points = team.silver_coins + (10 * team.gold_coins);
 
         	teamList.Add(team);
@@ -67,28 +53,38 @@ public class Ranking : Screen {
 
      private void CreateTeamsCard()
      {
-     	Vector3 Position = TeamCard.transform.position;
+     	Vector3 Position = teamCard.transform.position;
 
      	foreach (Team team in teamList)
         {
-        	TeamName.text = team.name;
-        	GoldCoins.text = "" + team.gold_coins;
-        	SilverCoins.text = "" + team.silver_coins;
+        	teamName.text = team.name;
+			goldCoins.text = team.gold_coins.ToString();
+			silverCoins.text = team.silver_coins.ToString();
 
             Position = new Vector3(Position.x, Position.y - 100, Position.z);
             
             SpriteRenderer sr = gameObject.GetComponent<SpriteRenderer>();
             sr.sprite = Resources.Load<Sprite>("Emblem/" + team.name);
 
-            TeamEmblem.sprite = sr.sprite;
+            teamEmblem.sprite = sr.sprite;
 
-            GameObject Card = (GameObject) Instantiate(TeamCard, Position, Quaternion.identity);
+            GameObject Card = (GameObject) Instantiate(teamCard, Position, Quaternion.identity);
             Card.transform.SetParent(GameObject.Find("Teams").transform, false);
 
             Debug.Log(team.ToString());
         }
 
-        Destroy(TeamCard);
+        updatingText.SetActive(false);
+        Destroy(teamCard);
+
+		StartCoroutine (UpdateRanking ());
      }
 
+	private IEnumerator UpdateRanking()
+	{
+		yield return new WaitForSeconds (60);
+		LoadNextScene ();
+
+		Debug.Log ("Ranking updated");
+	}
 }
