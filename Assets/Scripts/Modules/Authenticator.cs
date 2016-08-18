@@ -21,7 +21,7 @@ public static class Authenticator
 
 	private static string TransformInSlug(string team)
 	{
-		team = team.ToLower().Replace(" ", "-");
+		team = team.ToLower().Replace(" ", "-").Replace("á", "a");
 		return team; 
 	}
 }

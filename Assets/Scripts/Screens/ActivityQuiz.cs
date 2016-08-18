@@ -50,6 +50,7 @@ public class ActivityQuiz : Screen
 			if (currentScreen.name.Equals ("Home")) 
 			{
 				CameraDevice.StopCameraImage ();
+				Input.location.Stop();
 				LoadBackScene ();
 			}
 				else
@@ -146,7 +147,10 @@ public class ActivityQuiz : Screen
 		activityHomeLocation.text = QuestManager.activity.location;
 
 		if (QuestManager.activity.gps_enabled)
+		{
+			Input.location.Start();
 			GPS.ReceivePlayerLocation ();
+		}
 
 		OpenScreen ("Activity Home");
 	}
@@ -166,39 +170,37 @@ public class ActivityQuiz : Screen
 
 	public void RequestCoordinates(string step)
 	{
-		GPS.ReceivePlayerLocation ();
+		bool requestSuccess = GPS.ReceivePlayerLocation ();
 		
-		if (GPS.location == null)
+		if (!requestSuccess || GPS.location == null)
 			return;
 
 		if (GPS.location[0] == 0 || GPS.location[1] == 0)
-			GPS.ReceivePlayerLocation();
+		{
+			UnityAndroidExtras.instance.makeToast("Verifique o serviço de localização do celular", 1);
+			return;
+		}
 
+		UnityAndroidExtras.instance.makeToast("Localização obtida", 1);
 		string playerLocation = GPS.location[0] + " | " + GPS.location[1];
 
 		switch (step) 
 		{
 		case "coord_start":
-			QuestManager.activityResponse.coord_start = playerLocation;
-			break;
+			QuestManager.activityResponse.coord_start = playerLocation; break;
 		case "coord_mid":
-			QuestManager.activityResponse.coord_mid = playerLocation;
-			break;
+			QuestManager.activityResponse.coord_mid = playerLocation; break;
 		case "coord_end":
-			QuestManager.activityResponse.coord_end = playerLocation;
-			break;
+			QuestManager.activityResponse.coord_end = playerLocation; break;
 		}
 	}
 
 	public void CheckCoordsAndContinue()
 	{
 		if (QuestManager.AreCoordsFilled ()) 
-		{
-			UnityAndroidExtras.instance.makeToast("Coordenadas preenchidas", 1);
 			OpenScreen ("Media Screen");
-		}
 		else
-			UnityAndroidExtras.instance.makeToast("Coordenadas não preenchidas", 1);
+			UnityAndroidExtras.instance.makeToast("Marque os três locais da missão", 1);
 	}
 
 	public void StartCamera()

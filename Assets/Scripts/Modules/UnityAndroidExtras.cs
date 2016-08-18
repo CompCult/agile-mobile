@@ -31,7 +31,7 @@ public class UnityAndroidExtras : MonoBehaviour {
 	/// <param name="length"(must be either 0 or 1!)>Length.</param>
 	public void makeToast(string toast,int length)
 	{
-		Debug.Log("Toast:" + toast);
+		Debug.Log("Toast: " + toast);
 		
 		if (Application.platform != RuntimePlatform.Android) 
 			return;

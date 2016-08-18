@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 public static class WebFunctions
 {
-	private static string _url = "http://agile-admin-dev.herokuapp.com/api",
+	// http://agile-admin-dev.herokuapp.com/api
+	// http://arenademetis.com.br/api
+	private static string _url = "http://arenademetis.com.br/api",
 	_pvtKey = "c64620ce5b6ef7c901c947cd38314e279421d489",
 	_apiPlace = "/";
 
@@ -35,8 +37,6 @@ public static class WebFunctions
 
 	public static bool haveError(WWW response)
 	{
-		Debug.Log (response.text);
-
 		if (response == null) 
 		{
 			UnityAndroidExtras.instance.makeToast("Sem conexão", 1);
@@ -45,7 +45,14 @@ public static class WebFunctions
 
 		if (response.text != null) 
 		{
-			if (response.text != null && response.text.Contains("invalid ")) {
+			if (response.text.Equals("")) 
+			{
+				UnityAndroidExtras.instance.makeToast("Falha no servidor", 1);
+				return true;
+			}
+
+			if (response.text != null && response.text.Contains("invalid ")) 
+			{
 				UnityAndroidExtras.instance.makeToast("PIN inválido", 1);
 				return true;
 			}

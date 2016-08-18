@@ -20,7 +20,7 @@ public class Login : Screen
 		string pin = pinField.text,
 		team = teamSelector.captionText.text;
 
-		UnityAndroidExtras.instance.makeToast("Conectando...", 1);
+		UnityAndroidExtras.instance.makeToast("Conectando", 1);
 
 		WWW loginRequest = Authenticator.RequestTeam (pin, team);
 
