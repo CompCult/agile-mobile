@@ -28,7 +28,7 @@ public static class AudioRec
 			if (!Microphone.IsRecording(null))
 			{
 				UnityAndroidExtras.instance.makeToast("Clique novamente para parar a gravação", 1);
-				audioSource.clip = Microphone.Start(null, true, 20, maxFreq);
+				audioSource.clip = Microphone.Start(null, true, 600, maxFreq);
 			}
 			else //Recording is in progress, then stop it.
 			{

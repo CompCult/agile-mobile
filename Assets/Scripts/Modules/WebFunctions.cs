@@ -4,8 +4,9 @@ using System.Collections.Generic;
 public static class WebFunctions
 {
 	// http://agile-admin-dev.herokuapp.com/api
+	// http://agile-admin.heroku.herokuapp.com/api
 	// http://arenademetis.com.br/api
-	private static string _url = "http://agile-admin-dev.herokuapp.com/api",
+	private static string _url = "http://arenademetis.com.br/api",
 	_pvtKey = "c64620ce5b6ef7c901c947cd38314e279421d489",
 	_apiPlace = "/";
 

@@ -36,12 +36,17 @@ public static class QuestManager
 
 		WWWForm responseForm = new WWWForm ();
 
+		Debug.Log("grupo: " + quizResponse.group_id + " / id: " + quizResponse.quiz_id + " / status: " + quizResponse.quiz_correct);
+
 		responseForm.AddField("group_id", quizResponse.group_id);
-		responseForm.AddField ("activity_id", quizResponse.quiz_id);
+		responseForm.AddField ("quiz_id", quizResponse.quiz_id);
 		responseForm.AddField ("quiz_correct", quizResponse.quiz_correct);
 
 		Debug.Log ("Enviando para " + url);
 		WWW response =  WebFunctions.Post(url, responseForm);
+
+		if (response.error != null)
+			Debug.Log("Resposta: " + response.text);
 
 		return response;
 	}

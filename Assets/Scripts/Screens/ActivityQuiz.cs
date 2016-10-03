@@ -38,6 +38,7 @@ public class ActivityQuiz : Screen
 		UnityAndroidExtras.instance.Init();
 
 		ClearPreviousVoice ();
+		GPS.StartGPS();
 
 		StartCamera ();
 		OpenScreen("Home");
@@ -115,8 +116,8 @@ public class ActivityQuiz : Screen
 			ID = "-1";
 				
 		url =  WebFunctions.url + WebFunctions.apiPlace + ID + "/" + WebFunctions.pvtKey;
-
 		WWW questForm = WebFunctions.Get (url);
+		
 		if (!WebFunctions.haveError (questForm)) 
 		{
 			ClearPreviousVoice ();
@@ -255,7 +256,7 @@ public class ActivityQuiz : Screen
 	{
 		WWW response;
 
-		if (QuestManager.activity != null)
+		if (QuestManager.activity != null) // Checa se existe uma resposta aguardando envio
 			response = QuestManager.SendActivity ();
 		else
 			response = QuestManager.SendQuiz ();

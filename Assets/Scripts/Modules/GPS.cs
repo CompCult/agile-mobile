@@ -8,6 +8,16 @@ public static class GPS
 	private static double[] _location;
 	public static double[] location { get { return _location; } }
 
+	public static void StartGPS()
+	{
+		Input.location.Start();
+	}
+
+	public static void StopGPS()
+	{
+		Input.location.Stop();
+	}
+
 	public static bool ReceivePlayerLocation()
 	{
 		if (Application.platform != RuntimePlatform.Android) 
@@ -22,8 +32,6 @@ public static class GPS
 			return false;
 		}
 
-		Input.location.Start();
-
 		if (Input.location.status == LocationServiceStatus.Failed)
 		{
 			UnityAndroidExtras.instance.makeToast("Problema no serviço de localização do celular", 1);
@@ -36,9 +44,7 @@ public static class GPS
 			_location[0] = System.Convert.ToDouble(Input.location.lastData.latitude);
 			_location[1] = System.Convert.ToDouble(Input.location.lastData.longitude);
 		}
-
-		Input.location.Stop();
-			
+		
 		return true;
 	}
 
