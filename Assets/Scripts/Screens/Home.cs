@@ -2,7 +2,7 @@
 using UnityEngine.UI;
 using System.Collections;
 
-public class Home : Screen 
+public class Home : GenericScreen 
 {
 	public Text teamNameField, goldCoinsField, silverCoinsField;
 	public Image teamEmblem;

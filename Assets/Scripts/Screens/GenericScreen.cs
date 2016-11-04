@@ -2,7 +2,7 @@
 using UnityEngine.SceneManagement;
 using System.Collections;
 
-public class Screen : MonoBehaviour 
+public class GenericScreen : MonoBehaviour 
 {
 	protected static string backScene,
 	nextScene;

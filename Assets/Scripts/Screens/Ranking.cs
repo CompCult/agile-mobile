@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 
-public class Ranking : Screen 
+public class Ranking : GenericScreen 
 {
 	public GameObject teamCard, updatingText;
 	public Image teamEmblem, teamMedal, teamBackground;

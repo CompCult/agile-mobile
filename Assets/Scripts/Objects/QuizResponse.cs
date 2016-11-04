@@ -4,7 +4,6 @@ using System.Collections;
 public class QuizResponse
 {
 	public int quiz_id,
-	group_id;
-
-	public string quiz_correct;
+	group_id,
+	quiz_answer;
 }

@@ -36,11 +36,11 @@ public static class QuestManager
 
 		WWWForm responseForm = new WWWForm ();
 
-		Debug.Log("grupo: " + quizResponse.group_id + " / id: " + quizResponse.quiz_id + " / status: " + quizResponse.quiz_correct);
+		Debug.Log("grupo: " + quizResponse.group_id + " / id: " + quizResponse.quiz_id + " / resposta: " + quizResponse.quiz_answer);
 
 		responseForm.AddField("group_id", quizResponse.group_id);
 		responseForm.AddField ("quiz_id", quizResponse.quiz_id);
-		responseForm.AddField ("quiz_correct", quizResponse.quiz_correct);
+		responseForm.AddField ("quiz_answer", quizResponse.quiz_answer);
 
 		Debug.Log ("Enviando para " + url);
 		WWW response =  WebFunctions.Post(url, responseForm);
@@ -111,15 +111,8 @@ public static class QuestManager
 		activityResponse.coord_end != null);
 	}
 
-	public static bool RegisterQuizResponse(string response)
+	public static void RegisterQuizResponse(string response)
 	{
-		if (response.Equals (quiz.correct)) 
-		{
-			quizResponse.quiz_correct = "Acertou";
-			return true;
-		}
-
-		quizResponse.quiz_correct = "Errou";
-		return false;
+		quizResponse.quiz_answer = int.Parse(response);
 	}
 }

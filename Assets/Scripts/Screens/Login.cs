@@ -2,7 +2,7 @@
 using UnityEngine.UI;
 using System;
 
-public class Login : Screen 
+public class Login : GenericScreen 
 {
 	[Header("Screen elements")]
 	public Dropdown teamSelector;
@@ -12,6 +12,7 @@ public class Login : Screen
 	{
 		nextScene = "Home";
 		backScene = null;
+		
 		UnityAndroidExtras.instance.Init();
 	}
 

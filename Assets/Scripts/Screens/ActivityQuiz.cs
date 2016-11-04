@@ -5,7 +5,7 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
-public class ActivityQuiz : Screen 
+public class ActivityQuiz : GenericScreen 
 {
 	[Header("Screens")]
 	public GameObject[] internalScreens;
